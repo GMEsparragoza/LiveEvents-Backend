@@ -12,4 +12,6 @@ export const {
     JWT_CREDENTIAL_SECRET = '',
     JWT_REFRESH_SECRET = '',
     NODE_ENV = '',
+    EMAIL_USER = '',
+    EMAIL_PASS = '',
 } = process.env

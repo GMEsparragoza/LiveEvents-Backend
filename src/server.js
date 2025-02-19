@@ -21,7 +21,7 @@ app.use(cors({
 
 const apiLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 Minuto
-    max: 20, // Máximo de 100 peticiones por IP
+    max: 25, // Máximo de 100 peticiones por IP
     handler: (req, res) => {
         res.status(429).json({ message: "Too many requests, please try again later" });
     },

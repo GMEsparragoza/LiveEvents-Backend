@@ -8,6 +8,7 @@ const usersSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     role: { type: String, required: true, Enum: ['admin', 'user'], default: 'user' },
     imageURL: { type: String },
+    oobCode: { type: String },
     createdAt: { type: Date, default: Date.now }
 }, { timestamps: true })
 
