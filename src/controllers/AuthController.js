@@ -1,8 +1,11 @@
 import User from '../models/Users.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { JWT_REFRESH_SECRET, JWT_CREDENTIAL_SECRET, NODE_ENV } from '../config/variables.js';
+import { JWT_REFRESH_SECRET, JWT_CREDENTIAL_SECRET, NODE_ENV, GOOGLE_CLIENT_ID } from '../config/variables.js';
 import { sendResetPasswordEmail } from './EmailController.js';
+import { OAuth2Client } from 'google-auth-library'
+
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const RegisterUser = async (req, res) => {
     const { username, email, password } = req.body;
@@ -119,7 +122,7 @@ const ResetPassword = async (req, res) => {
         if (!existingUser) {
             return res.status(404).json({ message: 'User not found' });
         }
-        
+
         if (existingUser.oobCode !== oobCode) {
             return res.status(400).json({ message: 'The Link is not valid' });
         }
@@ -132,6 +135,62 @@ const ResetPassword = async (req, res) => {
         res.status(200).json({ message: 'Password reset successful' });
     } catch (error) {
         res.status(500).json({ message: error.message, error: 'Error trying to reset password' });
+    }
+}
+
+const googleLogIn = async (req, res) => {
+    const { idToken } = req.body;
+    if (!idToken) {
+        return res.status(400).json({ message: "No se recibió el ID Token" });
+    }
+
+    try {
+        // Verificar el ID Token con Google
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        const { email, name, given_name, family_name, picture } = payload;
+        const existingUser = await User.findOne({ email })
+        const newUser = new User({
+            name: given_name,
+            lastname: family_name,
+            email,
+            username: name,
+            imageURL: picture,
+        })
+        const tokenPayload = {
+            email: existingUser?.email || newUser.email,
+            id: existingUser?._id || newUser._id,
+            username: existingUser?.username || newUser.name,
+            role: existingUser?.role || newUser.role
+        }
+        if (!existingUser) {
+            await newUser.save();
+        }
+
+        const accessToken = jwt.sign(tokenPayload, JWT_CREDENTIAL_SECRET, { expiresIn: '15m' });
+        const refreshToken = jwt.sign(tokenPayload, JWT_REFRESH_SECRET, { expiresIn: '7d' });
+
+        res.cookie('access_token', accessToken, {
+            httpOnly: true,
+            secure: NODE_ENV === 'production',
+            sameSite: NODE_ENV === 'production' ? 'None' : 'Lax',
+            maxAge: 15 * 60 * 1000
+        });
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: NODE_ENV === 'production',
+            sameSite: NODE_ENV === 'production' ? 'None' : 'Lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.status(200).json({ message: "Login successful" });
+    } catch (error) {
+        console.error("Error verifying ID token:", error);
+        res.status(401).json({ message: "Invalid Token" });
     }
 }
 
@@ -159,5 +218,6 @@ export const AuthController = {
     AuthSession,
     resetUserPassword,
     ResetPassword,
+    googleLogIn,
     logOutSession
 }

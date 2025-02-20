@@ -14,4 +14,5 @@ export const {
     NODE_ENV = '',
     EMAIL_USER = '',
     EMAIL_PASS = '',
+    GOOGLE_CLIENT_ID = '',
 } = process.env
