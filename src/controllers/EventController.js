@@ -2,7 +2,7 @@ import Event from '../models/Events.js'
 import { uploadToCloudinary } from '../services/CloudinaryService.js'
 import mongoose from 'mongoose'
 
-const ObtainEvents = async (req, res) => {
+const ObtainAdminEvents = async (req, res) => {
     const { filter } = req.query;
     try {
         let query = {};
@@ -24,11 +24,63 @@ const ObtainEvents = async (req, res) => {
     }
 }
 
+const ObtainPublicsEvents = async (req, res) => {
+    const { page = 1, search, date } = req.query;
+    const limit = 10; // Número de resultados por página
+    const skip = (page - 1) * limit;
+
+    // Se construye el objeto de consulta dinámicamente
+    let query = {};
+
+    // Si se envía un término de búsqueda, se filtra por título o descripción (ignora mayúsculas/minúsculas)
+    if (search) {
+        query.$or = [
+            { description: { $regex: search, $options: 'i' } },
+            { title: { $regex: search, $options: 'i' } }
+        ];
+    }
+
+    // Se define un rango: desde el inicio del día hasta antes del inicio del siguiente.
+    if (date) {
+        const startDate = new Date(date);
+        const endDate = new Date(date);
+        endDate.setDate(endDate.getDate() + 1);
+        query.date = { $gte: startDate, $lt: endDate };
+    }
+
+    try {
+        // Se obtienen el total de eventos que cumplen el filtro (para calcular el total de páginas)
+        const total = await Event.countDocuments(query);
+
+        // Se obtienen los eventos, ordenándolos de los más recientes a los más antiguos
+        const events = await Event.find(query)
+            .sort({ date: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        res.status(200).json({
+            events,
+            totalPages: Math.ceil(total / limit)
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message, error: 'Error obtaining Events' });
+    }
+};
+
 const createNewEvent = async (req, res) => {
     const eventData = JSON.parse(req.body.eventData)
     const { id } = req.user;
+    const imageFile = req.files.image ? req.files.image[0] : null;
+    const bannerFile = req.files.banner ? req.files.banner[0] : null;
     try {
-        const imageURL = await uploadToCloudinary(req.file.buffer)
+        let imageURL = null
+        let bannerURL = null
+        if(imageFile){
+            imageURL = await uploadToCloudinary(imageFile?.buffer)
+        }
+        if(bannerFile) {
+            bannerURL = await uploadToCloudinary(bannerFile?.buffer)
+        }
 
         const newEvent = new Event({
             tittle: eventData.tittle,
@@ -36,6 +88,7 @@ const createNewEvent = async (req, res) => {
             date: eventData.date,
             location: eventData.location,
             imageURL,
+            bannerURL,
             price: eventData?.price || 0,
             createdBy: new mongoose.Types.ObjectId(id)
         })
@@ -53,7 +106,7 @@ const updateEvent = async (req, res) => {
     const { data } = req.body
     try {
         const existingEvent = await Event.findById(id)
-        if(!existingEvent) {
+        if (!existingEvent) {
             res.status(404).json({ message: 'Event Not Found' })
         }
 
@@ -76,7 +129,7 @@ const deleteEvent = async (req, res) => {
     const { id } = req.params;
     try {
         const eliminatedEvent = await Event.findByIdAndDelete(id)
-        if(!eliminatedEvent) {
+        if (!eliminatedEvent) {
             res.status(404).json({ message: 'Event Not Found' })
         }
 
@@ -87,7 +140,8 @@ const deleteEvent = async (req, res) => {
 }
 
 export const EventController = {
-    ObtainEvents,
+    ObtainAdminEvents,
+    ObtainPublicsEvents,
     createNewEvent,
     updateEvent,
     deleteEvent

@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit'
 import cookieParser from 'cookie-parser'
 import AuthRoutes from './routes/AuthRoutes.js'
 import AdminRoutes from './routes/AdminRoutes.js'
+import EventRoutes from './routes/EventRoutes.js'
 
 const app = express()
 
@@ -33,6 +34,8 @@ const apiLimiter = rateLimit({
 app.use('/api/auth', apiLimiter, AuthRoutes)
 
 app.use('/api/admin', AdminRoutes)
+
+app.use('/api/event', EventRoutes)
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

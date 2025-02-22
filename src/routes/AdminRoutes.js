@@ -7,10 +7,13 @@ import { UserController } from '../controllers/UserController.js'
 
 const router = express.Router()
 
-router.get('/events', VerifyToken, verifyAdmin, EventController.ObtainEvents)
+router.get('/events', VerifyToken, verifyAdmin, EventController.ObtainAdminEvents)
 router.get('/users', VerifyToken, verifyAdmin, UserController.getUsersByFilter)
 
-router.post('/event', VerifyToken, verifyAdmin, upload.single('image'), EventController.createNewEvent)
+router.post('/event', VerifyToken, verifyAdmin, upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'banner', maxCount: 1 }
+]), EventController.createNewEvent)
 
 router.put('/user/:id', VerifyToken, verifyAdmin, UserController.updateUser)
 router.put('/event/:id', VerifyToken, verifyAdmin, EventController.updateEvent)
