@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import https from 'https'
+import http from 'http'
 import { PORT, FRONTEND_URL, NODE_ENV } from './config/variables.js'
 import { connectDB } from './config/database.js'
 import rateLimit from 'express-rate-limit'
@@ -17,7 +17,7 @@ const app = express()
 
 connectDB()
 
-export const server = https.createServer(app);
+export const server = http.createServer(app);
 
 app.use(express.json())
 app.use(cookieParser())
@@ -58,7 +58,7 @@ app.use('/api/profile', ProfileRoutes)
 
 // Manejo de conexiones con Socket.io
 io.on("connection", (socket) => {
-
+    console.log(`Servidor de Socket.io conectado: ${socket.id}`)
     // Al conectarse, enviar el historial de mensajes del evento específico
     socket.on('joinEvent', (eventId) => {
         Message.find({ event: eventId })  // Filtra por el evento específico
