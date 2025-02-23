@@ -160,7 +160,7 @@ const updateUserPassword = async (req, res) => {
 const ObtainActivityLogsUser = async (req, res) => {
     const { id } = req.user
     try {
-        const userLogs = await ActivityLog.find({ userID: id }).sort({ createdAt: -1 })
+        const userLogs = await ActivityLog.find({ userID: id }).sort({ createdAt: -1 }).limit(10)
         res.status(200).json(userLogs)
     } catch (error) {
         res.status(500).json({ message: 'Error trying to obtain user logs' })

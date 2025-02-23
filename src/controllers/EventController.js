@@ -1,7 +1,32 @@
 import Event from '../models/Events.js'
+import User from '../models/Users.js'
+import Message from '../models/Messages.js'
+import Notification from '../models/Notifications.js'
 import { uploadToCloudinary } from '../services/CloudinaryService.js'
 import mongoose from 'mongoose'
 import logActivity from '../services/ActivityLogService.js'
+
+const ObtainEventDetails = async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Se busca el evento y se popula el campo 'createdBy' para obtener los datos del usuario (por ejemplo, solo el username)
+        const existingEvent = await Event.findById(id).populate('createdBy', 'username');
+
+        if (!existingEvent) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const organizer = await User.findById(existingEvent.createdBy._id)
+
+        const adminEvents = await Event.countDocuments({ createdBy: organizer._id })
+
+        res.status(200).json({ event: existingEvent, organizer, amountEvents: adminEvents });
+    } catch (error) {
+        console.error('Error: ', error.message);
+        res.status(500).json({ message: 'Error trying to obtain event details', error: error.message });
+    }
+}
+
 
 const ObtainAdminEvents = async (req, res) => {
     const { filter } = req.query;
@@ -72,7 +97,7 @@ const ObtainPublicsReducedEvents = async (req, res) => {
     try {
         let query = {}
         const now = new Date()
-        
+
         query.date = { $gt: now };
         const events = await Event.find(query)
             .sort({ date: 1 })
@@ -111,6 +136,16 @@ const createNewEvent = async (req, res) => {
         })
         await newEvent.save();
 
+        const Admin = await User.findById(id)
+
+        const Noti = new Notification({
+            tittle: `The ${newEvent.tittle} event was created by ${Admin.username}`,
+            createdBy: new mongoose.Types.ObjectId(id),
+            type: 'notification',
+            notification: 'info'
+        })
+        await Noti.save()
+
         await logActivity(
             id, // ID del usuario
             "EVENT_CREATED",
@@ -143,6 +178,16 @@ const updateEvent = async (req, res) => {
 
         await existingEvent.save();
 
+        const Admin = await User.findById(adminID)
+
+        const Noti = new Notification({
+            tittle: `The ${existingEvent.tittle} event was updated by ${Admin.username}`,
+            createdBy: new mongoose.Types.ObjectId(adminID),
+            type: 'notification',
+            notification: 'info'
+        })
+        await Noti.save()
+
         await logActivity(
             adminID, // ID del usuario
             "EVENT_UPDATED",
@@ -159,13 +204,31 @@ const updateEvent = async (req, res) => {
 
 const deleteEvent = async (req, res) => {
     const { id } = req.params;
-    const adminID = req.user.id
+    const adminID = req.user.id;
+
     try {
-        const eliminatedEvent = await Event.findByIdAndDelete(id)
+        // Buscar y eliminar el evento
+        const eliminatedEvent = await Event.findByIdAndDelete(id);
+
+        // Verificar si el evento existía
         if (!eliminatedEvent) {
-            res.status(404).json({ message: 'Event Not Found' })
+            return res.status(404).json({ message: 'Event Not Found' });
         }
 
+        // Eliminar todos los mensajes asociados al evento
+        await Message.deleteMany({ event: id });
+
+        const Admin = await User.findById(adminID)
+
+        const Noti = new Notification({
+            tittle: `The ${eliminatedEvent.tittle} event was deleted by ${Admin.username}`,
+            createdBy: new mongoose.Types.ObjectId(adminID),
+            type: 'notification',
+            notification: 'warning'
+        })
+        await Noti.save()
+
+        // Registrar la actividad
         await logActivity(
             adminID, // ID del usuario
             "EVENT_DELETED",
@@ -173,13 +236,17 @@ const deleteEvent = async (req, res) => {
             req // Pasamos la petición para extraer IP y User-Agent
         );
 
-        res.status(200).json({ message: 'Event eliminated successfully', deleteEvent: eliminatedEvent })
+        // Enviar respuesta exitosa
+        res.status(200).json({ message: 'Event eliminated successfully', deletedEvent: eliminatedEvent });
     } catch (error) {
-        res.status(500).json({ message: 'Error trying to Delete Event', error: error.message })
+        console.error(error); // Para debug en el servidor
+        res.status(500).json({ message: 'Error trying to Delete Event', error: error.message });
     }
-}
+};
+
 
 export const EventController = {
+    ObtainEventDetails,
     ObtainAdminEvents,
     ObtainPublicsEvents,
     ObtainPublicsReducedEvents,

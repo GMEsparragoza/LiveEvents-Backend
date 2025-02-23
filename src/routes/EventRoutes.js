@@ -5,5 +5,6 @@ const router = express.Router()
 
 router.get('/', EventController.ObtainPublicsEvents)
 router.get('/reduced', EventController.ObtainPublicsReducedEvents)
+router.get('/:id', EventController.ObtainEventDetails)
 
 export default router

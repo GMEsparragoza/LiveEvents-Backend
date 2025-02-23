@@ -5,7 +5,7 @@ const notificationSchema = new mongoose.Schema({
     message: { type: String },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Users' },
     type: { type: String, Enum: ['message', 'notification'], required: true },
-    notification: { type: String, Enum: ['warning', 'error'] },
+    notification: { type: String, Enum: ['info', 'warning', 'error'] },
     date: { type: Date, default: Date.now }
 }, { timestamps: true })
 
