@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { JWT_REFRESH_SECRET, JWT_CREDENTIAL_SECRET, NODE_ENV, GOOGLE_CLIENT_ID } from '../config/variables.js';
 import { sendResetPasswordEmail } from './EmailController.js';
 import { OAuth2Client } from 'google-auth-library'
+import logActivity from '../services/ActivityLogService.js'
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
@@ -63,6 +64,13 @@ const LoginUser = async (req, res) => {
             sameSite: NODE_ENV === 'production' ? 'None' : 'Lax',
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
+
+        await logActivity(
+            existingUser._id, // ID del usuario
+            "LOGIN",
+            `User session started - Email/Password method`,
+            req // Pasamos la petición para extraer IP y User-Agent
+        );
 
         res.status(200).json({ message: 'Login successful' });
     } catch (error) {
@@ -132,6 +140,13 @@ const ResetPassword = async (req, res) => {
         existingUser.oobCode = '';
         await existingUser.save();
 
+        await logActivity(
+            userID, // ID del usuario
+            "PASSWORD_CHANGE",
+            `User password reseted`,
+            req // Pasamos la petición para extraer IP y User-Agent
+        );
+
         res.status(200).json({ message: 'Password reset successful' });
     } catch (error) {
         res.status(500).json({ message: error.message, error: 'Error trying to reset password' });
@@ -187,6 +202,13 @@ const googleLogIn = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
+        await logActivity(
+            existingUser._id, // ID del usuario
+            "LOGIN",
+            `User session started - Google method`,
+            req // Pasamos la petición para extraer IP y User-Agent
+        );
+
         res.status(200).json({ message: "Login successful" });
     } catch (error) {
         console.error("Error verifying ID token:", error);
@@ -195,6 +217,7 @@ const googleLogIn = async (req, res) => {
 }
 
 const logOutSession = async (req, res) => {
+    const { id } = req.user
     try {
         res.clearCookie('access_token', {
             httpOnly: true,
@@ -206,6 +229,14 @@ const logOutSession = async (req, res) => {
             secure: NODE_ENV === 'production',
             sameSite: NODE_ENV === 'production' ? 'None' : 'Lax'
         });
+
+        await logActivity(
+            id, // ID del usuario
+            "LOGOUT",
+            `User session closed`,
+            req // Pasamos la petición para extraer IP y User-Agent
+        );
+
         res.status(200).json({ message: 'Logout successful' });
     } catch (error) {
         res.status(500).json({ message: error.message, error: 'Error trying to logout user' });

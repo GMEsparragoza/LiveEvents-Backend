@@ -7,7 +7,7 @@ const router = express.Router()
 router.post('/register', AuthController.RegisterUser)
 router.post('/login', AuthController.LoginUser)
 router.post('/reset-password', AuthController.resetUserPassword)
-router.post('/logout', AuthController.logOutSession)
+router.post('/logout', VerifyToken, AuthController.logOutSession)
 router.post('/google', AuthController.googleLogIn)
 
 router.get('/profile', VerifyToken, AuthController.AuthSession)

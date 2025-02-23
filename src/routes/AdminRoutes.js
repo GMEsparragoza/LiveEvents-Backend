@@ -19,10 +19,10 @@ router.post('/event', VerifyToken, verifyAdmin, upload.fields([
 ]), EventController.createNewEvent)
 router.post('/message', VerifyToken, verifyAdmin, AdminController.addNewAdminMessage)
 
-router.put('/user/:id', VerifyToken, verifyAdmin, UserController.updateUser)
+router.put('/user/:id', VerifyToken, verifyAdmin, UserController.updateUserWadmin)
 router.put('/event/:id', VerifyToken, verifyAdmin, EventController.updateEvent)
 
-router.delete('/user/:id', VerifyToken, verifyAdmin, UserController.deleteUser)
+router.delete('/user/:id', VerifyToken, verifyAdmin, UserController.deleteUserWadmin)
 router.delete('/event/:id', VerifyToken, verifyAdmin, EventController.deleteEvent)
 
 export default router

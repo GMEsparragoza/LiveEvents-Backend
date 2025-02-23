@@ -1,6 +1,7 @@
 import Event from '../models/Events.js'
 import { uploadToCloudinary } from '../services/CloudinaryService.js'
 import mongoose from 'mongoose'
+import logActivity from '../services/ActivityLogService.js'
 
 const ObtainAdminEvents = async (req, res) => {
     const { filter } = req.query;
@@ -94,6 +95,13 @@ const createNewEvent = async (req, res) => {
         })
         await newEvent.save();
 
+        await logActivity(
+            id, // ID del usuario
+            "EVENT_CREATED",
+            `The event '${newEvent.tittle}' was created`,
+            req // Pasamos la petición para extraer IP y User-Agent
+        );
+
         res.status(201).json({ message: 'Event Created Successfully', event: newEvent })
     } catch (error) {
         console.error('Error saving Event:', error);
@@ -104,6 +112,7 @@ const createNewEvent = async (req, res) => {
 const updateEvent = async (req, res) => {
     const { id } = req.params;
     const { data } = req.body
+    const adminID = req.user.id
     try {
         const existingEvent = await Event.findById(id)
         if (!existingEvent) {
@@ -118,6 +127,13 @@ const updateEvent = async (req, res) => {
 
         await existingEvent.save();
 
+        await logActivity(
+            adminID, // ID del usuario
+            "EVENT_UPDATED",
+            `The event '${existingEvent.tittle}' was updated`,
+            req // Pasamos la petición para extraer IP y User-Agent
+        );
+
         res.status(200).json({ message: 'Event Updated successfully', event: existingEvent })
     } catch (error) {
         console.error('Error: ', error.message)
@@ -127,11 +143,19 @@ const updateEvent = async (req, res) => {
 
 const deleteEvent = async (req, res) => {
     const { id } = req.params;
+    const adminID = req.user.id
     try {
         const eliminatedEvent = await Event.findByIdAndDelete(id)
         if (!eliminatedEvent) {
             res.status(404).json({ message: 'Event Not Found' })
         }
+
+        await logActivity(
+            adminID, // ID del usuario
+            "EVENT_DELETED",
+            `The event '${eliminatedEvent.tittle}' was deleted`,
+            req // Pasamos la petición para extraer IP y User-Agent
+        );
 
         res.status(200).json({ message: 'Event eliminated successfully', deleteEvent: eliminatedEvent })
     } catch (error) {
