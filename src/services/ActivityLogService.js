@@ -3,6 +3,7 @@ import { UAParser } from 'ua-parser-js'
 
 const logActivity = async (id, action, details, req) => {
     try {
+        console.log(req.ip)
         const parser = new UAParser(req.headers["user-agent"]);
         const device = parser.getDevice(); // Marca y modelo del dispositivo
         const os = parser.getOS(); // Sistema operativo

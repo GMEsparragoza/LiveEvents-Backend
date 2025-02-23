@@ -68,6 +68,22 @@ const ObtainPublicsEvents = async (req, res) => {
     }
 };
 
+const ObtainPublicsReducedEvents = async (req, res) => {
+    try {
+        let query = {}
+        const now = new Date()
+        
+        query.date = { $gt: now };
+        const events = await Event.find(query)
+            .sort({ date: 1 })
+            .limit(3);
+
+        res.status(200).json(events);
+    } catch (error) {
+        res.status(500).json({ message: error.message, error: 'Error obtaining Events' });
+    }
+};
+
 const createNewEvent = async (req, res) => {
     const eventData = JSON.parse(req.body.eventData)
     const { id } = req.user;
@@ -76,10 +92,10 @@ const createNewEvent = async (req, res) => {
     try {
         let imageURL = null
         let bannerURL = null
-        if(imageFile){
+        if (imageFile) {
             imageURL = await uploadToCloudinary(imageFile?.buffer)
         }
-        if(bannerFile) {
+        if (bannerFile) {
             bannerURL = await uploadToCloudinary(bannerFile?.buffer)
         }
 
@@ -166,6 +182,7 @@ const deleteEvent = async (req, res) => {
 export const EventController = {
     ObtainAdminEvents,
     ObtainPublicsEvents,
+    ObtainPublicsReducedEvents,
     createNewEvent,
     updateEvent,
     deleteEvent

@@ -1,4 +1,5 @@
 import User from '../models/Users.js'
+import Event from '../models/Events.js'
 import ActivityLog from '../models/ActivityLog.js';
 import { uploadToCloudinary } from '../services/CloudinaryService.js'
 import logActivity from '../services/ActivityLogService.js'
@@ -166,11 +167,23 @@ const ObtainActivityLogsUser = async (req, res) => {
     }
 }
 
+const ObtainCreatedUserEvents = async (req, res) => {
+    const { id } = req.user
+    try {
+        const events = await Event.find({ createdBy: id })
+
+        res.status(200).json(events)
+    } catch (error) {
+        res.status(500).json({ message: 'Error trying to obtain user events' })
+    }
+}
+
 export const UserController = {
     getUsersByFilter,
     updateUserWadmin,
     deleteUserWadmin,
     updateUserData,
     updateUserPassword,
-    ObtainActivityLogsUser
+    ObtainActivityLogsUser,
+    ObtainCreatedUserEvents
 }
