@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
-import http from 'http'
-import { PORT, FRONTEND_URL } from './config/variables.js'
+import https from 'https'
+import { PORT, FRONTEND_URL, NODE_ENV } from './config/variables.js'
 import { connectDB } from './config/database.js'
 import rateLimit from 'express-rate-limit'
 import cookieParser from 'cookie-parser'
@@ -17,7 +17,7 @@ const app = express()
 
 connectDB()
 
-export const server = http.createServer(app);
+export const server = https.createServer(app);
 
 app.use(express.json())
 app.use(cookieParser())
@@ -30,10 +30,12 @@ app.use(cors({
 
 const io = new SocketIOServer(server, {
     cors: {
-        origin: FRONTEND_URL, // O la URL que uses en producción
+        origin: FRONTEND_URL, 
         methods: ["GET", "POST"],
         credentials: true
-    }
+    },
+    secure: NODE_ENV === 'production',
+    transports: ['websocket', 'polling']
 });
 
 const apiLimiter = rateLimit({
